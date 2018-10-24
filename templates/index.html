@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta charset="UTF-8">
+	<meta name="description" content="Hail hydra, 9/11 was an inside job, Reg from made in abyss is cute.">
+	<meta name="keywords" content="playlist to zip, youtube, downloader">
+	<!-- Hey mom! I changed the site! My changes should reflect now the little piece of shit. -->
+	<script defer src="https://use.fontawesome.com/releases/v5.0.4/js/all.js"></script>
+	<!-- Compiled and minified JavaScript -->
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+	<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.css" />
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.js"></script>
+
+	<title>to.noku.pw</title>
+	<!--Let browser know website is optimized for mobile-->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<style type="text/css">
+		#main-container {
+			min-height: 100vh;
+		}
+
+		.scrollable {
+			overflow: scroll;
+			overflow-x: hidden;
+			max-height: 90vh;
+		}
+	</style>
+</head>
+
+<body class="" ng-app="link-noku" ng-controller="linkCtrl">
+	<div id="main-container" class="ui container">
+		<h2 class="ui teal image center aligned header" style="width: 100vw; margin: 2rem;">
+			<img src="https://i.imgur.com/6kE1lP7.png" class="image">
+			<div class="content">
+				to.noku
+			</div>
+		</h2>
+		<div class="segment">
+			<form class="ui large form" ng-cloak>
+				<div class="ui attached segment">
+					<div class="field">
+						<div class="ui left icon input">
+							<input type="text" ng-change="checkClear()" placeholder="https://mylongwebsitecauseitscheap.com" ng-model="link">
+							<i class="linkify icon"></i>
+						</div>
+					</div>
+					<div class="field">
+						<div class="ui left icon input">
+							<input type="text" placeholder="Leave blank to generate a random shortlink." ng-model="shortlink">
+							<i class="paper plane icon"></i>
+						</div>
+					</div>
+					<div class="field">
+						<div class="ui left icon input">
+							<input type="password" placeholder="" ng-model="password">
+							<i class="lock icon"></i>
+						</div>
+					</div>
+					<button class="ui button blue" ng-class="{loading: processing}" ng-click="createLink()">Create!</button>
+				</div>
+				<div class="ui fluid bottom attached segment scrollable" ng-show="result.ok">
+					<div class="ui action fluid input">
+						<input type="text" value="{{result.ok}}">
+						<button class="ui teal right labeled icon button" ng-click="copyToClipboard(result.ok); copyText = 'Copied!'">
+							<i class="copy icon"></i>
+							{{copyText}}
+						</button>
+					</div>
+				</div>
+				<div class="ui negative message" ng-show="result.error">
+					<i class="close icon" ng-click="result.error = false"></i>
+					<div class="header">
+						Error!
+					</div>
+					<p>
+						{{result.error}}
+					</p>
+				</div>
+			</form>
+
+			<h3 class="ui center aligned header">History</h3>
+			<div class="ui segment">
+				<div class="ui relaxed divided list">
+					<div class="item" ng-repeat="link in previousLinks">
+						<div id="delete-loader-{{$index}}" class="ui inverted dimmer">
+							<div class="ui mini text loader">Deleting</div>
+						</div>
+						<div class="right floated content">
+							<span style="margin-right: 1rem;">
+								<b>{{link.views}}</b> views
+							</span>
+							<a href="{{link.link.includes('http') ? '': 'http://'}}{{link.link}}" target="blank">
+								<i class="share square icon"></i>
+							</a>
+							<a href="#" ng-click="copyToClipboard(link.shortLink)">
+								<i class="copy icon"></i>
+							</a>
+							<a href="#" ng-click="deleteHistory($index);">
+								<i class="close icon"></i>
+							</a>
+						</div>
+						<div class="content">
+							<div class="header">{{link.shortLink}}</div>
+							To: {{link.link}}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="ui message">
+				Developed by <a href="https://twitter.com/nokusutwo">Noku!</a>
+			</div>
+
+		</div>
+</body>
+<script type="text/javascript">
+	var app = angular.module('link-noku', []);
+	app.controller('linkCtrl', function ($scope, $http) {
+		$scope.generated = false;
+		$scope.password = localStorage.getItem("password");
+		$scope.previousLinks = JSON.parse(localStorage.getItem("previousLinks")) || [];
+
+		$scope.createLink = function () {
+			$scope.copyText = "Copy";
+			$scope.processing = true;
+			$scope.result = false;
+			data = {
+				link: $scope.link,
+				shortlink: $scope.shortlink,
+				password: $scope.password
+			}
+			$http.post("/new", JSON.stringify(data)).then(x => {
+				console.log(x.data);
+				$scope.result = x.data;
+				$scope.processing = false;
+				$scope.generated = true;
+				if (x.data.ok) {
+					$scope.generatedLink = $scope.link;
+					$scope.previousLinks.push({
+						shortLink: $scope.result.ok,
+						link: $scope.link
+					});
+					localStorage.setItem("password", $scope.password);
+					localStorage.setItem("previousLinks", JSON.stringify($scope.previousLinks));
+				}
+			});
+		}
+
+		$scope.checkClear = function () {
+			if ($scope.generated && ($scope.generatedLink != $scope.link)) {
+				$scope.shortlink = "";
+				$scope.result = null;
+			}
+		}
+
+		$scope.getView = function (links) {
+			$http.get(links.shortLink + "/stats").then(resp => {
+				console.log(resp.data.views);
+				links.views = resp.data.views;
+			});
+		}
+
+		$scope.deleteHistory = function (index) {
+			$(`#delete-loader-${index}`).addClass("active");
+			data = {
+				shortlink: $scope.previousLinks[index].shortLink.split("/").pop(),
+				password: $scope.password
+			}
+			console.log(data)
+			$http.post("/delete", JSON.stringify(data)).then(resp => {
+				console.log(`${resp.data.ok} is deleted from the system boi~`)
+				$scope.previousLinks.splice(index, 1);
+				localStorage.setItem("previousLinks", JSON.stringify($scope.previousLinks));
+			})
+
+		}
+
+		$scope.copyToClipboard = str => {
+			const el = document.createElement('textarea');  // Create a <textarea> element
+			el.value = str;                                 // Set its value to the string that you want copied
+			el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
+			el.style.position = 'absolute';
+			el.style.left = '-9999px';                      // Move outside the screen to make it invisible
+			document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
+			const selected =
+				document.getSelection().rangeCount > 0        // Check if there is any content selected previously
+					? document.getSelection().getRangeAt(0)     // Store selection if found
+					: false;                                    // Mark as false to know no selection existed before
+			el.select();                                    // Select the <textarea> content
+			document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
+			document.body.removeChild(el);                  // Remove the <textarea> element
+			if (selected) {                                 // If a selection existed before copying
+				document.getSelection().removeAllRanges();    // Unselect everything on the HTML document
+				document.getSelection().addRange(selected);   // Restore the original selection
+			}
+		};
+
+		plinks = $scope.previousLinks;
+		for (link in plinks) {
+			$scope.getView(plinks[link]);
+		}
+		console.log(plinks);
+		$scope.previousLinks = plinks;
+
+	});
+</script>
+
+</html>
